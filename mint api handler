@@ -1,0 +1,37 @@
+// pages/api/mint.js
+import { ThirdwebSDK } from "@thirdweb-dev/sdk";
+import { NextApiRequest, NextApiResponse } from "next";
+
+// Initialize SDK
+const sdk = new ThirdwebSDK("polygon", {
+  clientId: "b083ec7295f86d288c7dfc235afc06e6", // Replace with your real Thirdweb Client ID
+});
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+
+  try {
+    const { meta_data, line_items } = req.body;
+    const wallet = meta_data.find(m => m.key === "wallet_address")?.value;
+
+    const product = line_items[0];
+    const metadata = {
+      name: product.name,
+      image: product.image,
+      description: "Thanks for supporting AmunRa! \u26a1\ufe0f",
+    };
+
+    const contract = await sdk.getContract(
+      "0x7335094cB35730F0ab1B52949FfFa21Bd1315D28",
+      "nft-drop"
+    );
+    const tx = await contract.erc721.claimTo(wallet, 1, { metadata });
+
+    return res.status(200).json({ success: true, tx });
+  } catch (err) {
+    console.error("Minting Error:", err);
+    return res.status(500).json({ error: "Minting failed", details: err.message });
+  }
+}
